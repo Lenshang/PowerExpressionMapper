@@ -1,0 +1,171 @@
+name: Build Plugins
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  # ============================================================
+  # Windows 构建
+  # ============================================================
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The local build reuses JUCE / clap-juce-extensions from the sibling
+      # PowerDrumMapper checkout (../BitwigDrumMapper/libs), which does not
+      # exist on CI — fetch both at the same pinned revisions instead.
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: 2cdfca8feb300fb424002ba2c2751569e5bacb64   # JUCE 8.0.14
+          path: deps/JUCE
+
+      - name: Checkout clap-juce-extensions
+        uses: actions/checkout@v4
+        with:
+          repository: free-audio/clap-juce-extensions
+          ref: 51a9359315298de632cf44e9d7524940868441e6
+          path: deps/clap-juce-extensions
+          submodules: recursive
+
+      - name: Set up MSVC Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure CMake
+        run: cmake -B build -S . -A x64 "-DJUCE_DIR=${{ github.workspace }}/deps/JUCE" "-DCLAP_JUCE_EXTENSIONS_DIR=${{ github.workspace }}/deps/clap-juce-extensions"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel --target PowerExpressionMapper_VST3 PowerExpressionMapper_Standalone PowerExpressionMapper_CLAP
+
+      - name: Build tests
+        run: cmake --build build --config Release --parallel --target PowerExpressionMapperTests
+
+      - name: Run tests
+        run: .\build\PowerExpressionMapperTests_artefacts\Release\PowerExpressionMapperTests.exe
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-Windows-CLAP
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/CLAP/
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-Windows-VST3
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/VST3/
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-Windows-Standalone
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/Standalone/
+
+  # ============================================================
+  # macOS 构建 (Universal Binary: Intel + Apple Silicon)
+  # ============================================================
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: 2cdfca8feb300fb424002ba2c2751569e5bacb64   # JUCE 8.0.14
+          path: deps/JUCE
+
+      - name: Checkout clap-juce-extensions
+        uses: actions/checkout@v4
+        with:
+          repository: free-audio/clap-juce-extensions
+          ref: 51a9359315298de632cf44e9d7524940868441e6
+          path: deps/clap-juce-extensions
+          submodules: recursive
+
+      - name: Configure CMake (Universal Binary)
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DJUCE_DIR="${GITHUB_WORKSPACE}/deps/JUCE" \
+            -DCLAP_JUCE_EXTENSIONS_DIR="${GITHUB_WORKSPACE}/deps/clap-juce-extensions"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel --target PowerExpressionMapper_VST3 PowerExpressionMapper_Standalone PowerExpressionMapper_CLAP
+
+      # Unit tests run in the Windows job only (the logic under test is
+      # platform-independent; keeps the macOS job free of GUI-init quirks).
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-macOS-CLAP
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/CLAP/
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-macOS-VST3
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/VST3/
+
+      - name: Upload Standalone
+        uses: actions/upload-artifact@v4
+        with:
+          name: PowerExpressionMapper-macOS-Standalone
+          path: |
+            build/PowerExpressionMapper_artefacts/Release/Standalone/
+
+  # ============================================================
+  # Release：推送 v* 标签时，把两个平台的产物打包发布到 GitHub Release
+  # ============================================================
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Pack per-platform zips
+        run: |
+          set -euo pipefail
+          mkdir -p stage/Windows/CLAP stage/Windows/VST3 stage/Windows/Standalone
+          mkdir -p stage/macOS/CLAP   stage/macOS/VST3   stage/macOS/Standalone
+          cp -r dist/PowerExpressionMapper-Windows-CLAP/.       stage/Windows/CLAP/
+          cp -r dist/PowerExpressionMapper-Windows-VST3/.        stage/Windows/VST3/
+          cp -r dist/PowerExpressionMapper-Windows-Standalone/.  stage/Windows/Standalone/
+          cp -r dist/PowerExpressionMapper-macOS-CLAP/.          stage/macOS/CLAP/
+          cp -r dist/PowerExpressionMapper-macOS-VST3/.          stage/macOS/VST3/
+          cp -r dist/PowerExpressionMapper-macOS-Standalone/.    stage/macOS/Standalone/
+          # MSVC import-library leftovers are useless to plugin users.
+          find stage \( -name '*.exp' -o -name '*.lib' \) -delete
+          (cd stage && zip -qr ../PowerExpressionMapper-Windows.zip Windows && zip -qr ../PowerExpressionMapper-macOS.zip macOS)
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
+          files: |
+            PowerExpressionMapper-Windows.zip
+            PowerExpressionMapper-macOS.zip

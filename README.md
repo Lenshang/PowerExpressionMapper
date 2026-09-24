@@ -114,6 +114,15 @@ PowerExpressionMapper/
     └── ProcessorTests.cpp            # Headless test runner (93 checks)
 ```
 
+## CI/CD
+
+GitHub Actions builds Windows and macOS (Universal Binary) artifacts and runs the unit tests on every push and pull request. Because this repo does not vendor JUCE, the workflow fetches JUCE and clap-juce-extensions itself at the same pinned revisions the local build uses. Pushing a `v*` tag (e.g. `v0.1.0`) additionally publishes a GitHub Release with `PowerExpressionMapper-Windows.zip` and `PowerExpressionMapper-macOS.zip` (each containing CLAP / VST3 / Standalone). See [`.github/workflows/build.yml`](.github/workflows/build.yml).
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0   # triggers the release build
+```
+
 ## Tech Stack
 
 - **JUCE 8.0.14** — Audio application framework
