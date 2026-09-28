@@ -40,15 +40,19 @@ jobs:
         with:
           arch: x64
 
-      # The WebView-based UI needs the WebView2 SDK headers + static loader
-      # (looked up by JUCE's FindWebView2 in this NuGet packages folder).
+      # The WebView-based UI needs the WebView2 SDK headers + static loader.
+      # OneGet (Install-Package) fails silently on the runner, so download
+      # the .nupkg directly and unpack it where JUCE's FindWebView2 looks.
       - name: Install WebView2 SDK
         shell: pwsh
         run: |
-          Register-PackageSource -provider NuGet -name nugetRepository `
-            -location https://www.nuget.org/api/v2 -ErrorAction SilentlyContinue
-          Install-Package Microsoft.Web.WebView2 -Scope CurrentUser `
-            -RequiredVersion 1.0.3485.44 -Source nugetRepository
+          $version = "1.0.3485.44"
+          $dest = "$env:LOCALAPPDATA\PackageManagement\NuGet\Packages\Microsoft.Web.WebView2\$version"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Invoke-WebRequest -Uri "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/$version/microsoft.web.webview2.$version.nupkg" -OutFile "$env:TEMP\webview2.zip"
+          Expand-Archive -Path "$env:TEMP\webview2.zip" -DestinationPath $dest -Force
+          if (-not (Test-Path "$dest\build\native\include\WebView2.h")) { exit 1 }
+          Write-Output "WebView2 SDK ready at $dest"
 
       - name: Configure CMake
         run: cmake -B build -S . -A x64 "-DJUCE_DIR=${{ github.workspace }}/deps/JUCE" "-DCLAP_JUCE_EXTENSIONS_DIR=${{ github.workspace }}/deps/clap-juce-extensions"
