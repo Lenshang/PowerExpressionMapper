@@ -40,6 +40,16 @@ jobs:
         with:
           arch: x64
 
+      # The WebView-based UI needs the WebView2 SDK headers + static loader
+      # (looked up by JUCE's FindWebView2 in this NuGet packages folder).
+      - name: Install WebView2 SDK
+        shell: pwsh
+        run: |
+          Register-PackageSource -provider NuGet -name nugetRepository `
+            -location https://www.nuget.org/api/v2 -ErrorAction SilentlyContinue
+          Install-Package Microsoft.Web.WebView2 -Scope CurrentUser `
+            -RequiredVersion 1.0.3485.44 -Source nugetRepository
+
       - name: Configure CMake
         run: cmake -B build -S . -A x64 "-DJUCE_DIR=${{ github.workspace }}/deps/JUCE" "-DCLAP_JUCE_EXTENSIONS_DIR=${{ github.workspace }}/deps/clap-juce-extensions"
 

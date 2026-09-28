@@ -15,8 +15,8 @@ A CLAP / VST3 MIDI effect plugin for **configuring expression / instrument names
 
 ## Features
 
-- **Name → note table UI** — Add / Remove / Clear entries, editable names, note cells with type-to-filter autocomplete: typing (`C1`, `38`, partial text) pops up a live-filtered suggestion list; unparseable input never sticks
-- **Delay control** — a slider for the unlisted-note delay (0 – 8192 samples, persisted in the plugin state)
+- **WebView UI** — the editor is an embedded Chromium view (JUCE's native WebView2 / WKWebView integration); Add / Remove / Clear entries, editable names, note cells with type-to-filter autocomplete: typing (`C1`, `38`, partial text) pops up a live-filtered suggestion list; unparseable input never sticks
+- **Delay control** — a slider for the unlisted-note delay (0 – 8192 samples, persisted in the plugin state), with a live milliseconds readout at the host sample rate
 - **No remapping** — note numbers, channels and velocities always pass through unchanged
 - **Sample-accurate block carry-over** — a delayed note is never quantised to the block edge
 - **Per-format note-name reporting**:
@@ -41,6 +41,14 @@ A CLAP / VST3 MIDI effect plugin for **configuring expression / instrument names
 - **CMake** >= 3.21
 - **C++20** compiler (Windows: Visual Studio 2022)
 - A **JUCE 8** checkout and a **clap-juce-extensions** checkout
+- **Windows only**: the **Microsoft.Web.WebView2** NuGet package (SDK headers + static loader for the embedded UI). JUCE looks for it in `%USERPROFILE%\AppData\Local\PackageManagement\NuGet\Packages`; install with PowerShell:
+
+  ```powershell
+  Register-PackageSource -provider NuGet -name nugetRepository -location https://www.nuget.org/api/v2
+  Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion 1.0.3485.44 -Source nugetRepository
+  ```
+
+  (macOS uses the system WKWebView and needs nothing extra.)
 
 By default the build reuses the sibling checkout at `../BitwigDrumMapper/libs/` (this is where this project was developed), so nothing needs to be downloaded:
 

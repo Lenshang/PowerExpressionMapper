@@ -1,17 +1,19 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "MappingTableComponent.h"
+#include "WebViewBridge.h"
 
 class ExpressionMapperAudioProcessor;
 
 /**
-    The plugin editor: title bar, the "delay for unlisted notes" control and
-    the mapping table. Listens to the processor so a host-driven state change
-    (preset load) refreshes everything.
+    The plugin editor: a single WebView component filling the window.
 
-    The window is resizable. High-DPI scaling is handled in the CLAP wrapper
-    (guiWin32Attach) so the editor always works in physical pixels.
+    All widgets (mapping table, delay control, import/export) live in the
+    embedded web page (Source/WebUI); this class only hosts the view, forwards
+    host-driven change messages into the page (preset loads from the host) and
+    keeps the CLAP-wrapper DPI workaround from the previous native UI.
+
+    The window is resizable.
 */
 class ExpressionMapperAudioProcessorEditor
     : public juce::AudioProcessorEditor
@@ -22,7 +24,6 @@ public:
     explicit ExpressionMapperAudioProcessorEditor (ExpressionMapperAudioProcessor&);
     ~ExpressionMapperAudioProcessorEditor() override;
 
-    void paint (juce::Graphics&) override;
     void resized() override;
     void parentHierarchyChanged() override;
 
@@ -32,12 +33,7 @@ private:
     void timerCallback() override;
 
     ExpressionMapperAudioProcessor& processor;
-
-    juce::Label titleLabel;
-    juce::Label delayLabel;
-    juce::Slider delaySlider;
-    juce::Label hintLabel;
-    MappingTableComponent tableComponent;
+    WebViewUIBridge bridge;
 
     int resizeCounter = 0;
 

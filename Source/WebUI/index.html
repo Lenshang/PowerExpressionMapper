@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PowerExpressionMapper</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="brand-text">
+        <h1>PowerExpressionMapper</h1>
+        <p>Named notes play instantly; the rest are delayed.</p>
+      </div>
+    </div>
+
+    <div class="delay-panel">
+      <div class="panel-label" id="delayLabel">Unlisted note delay</div>
+      <div class="delay-row">
+        <input type="range" id="delaySlider" min="0" max="8192" step="1" value="16"
+               aria-labelledby="delayLabel">
+        <div class="delay-value">
+          <span id="delaySamples">16</span><small>samples</small>
+        </div>
+      </div>
+      <div class="delay-ms" id="delayMs">&asymp; 0.33 ms @ 48.0 kHz</div>
+    </div>
+  </header>
+
+  <main class="table-panel">
+    <div class="table-head">
+      <div class="col-name">Name</div>
+      <div class="col-note">Note</div>
+      <div class="col-actions"></div>
+    </div>
+    <div class="table-body" id="tableBody" tabindex="-1"></div>
+    <div class="empty-state" id="emptyState" hidden>
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 18V5l10-2v13"/>
+        <circle cx="6.5" cy="18" r="2.5"/>
+        <circle cx="16.5" cy="16" r="2.5"/>
+      </svg>
+      <p>No entries yet</p>
+      <p class="empty-hint">Named notes pass through un-delayed and are shown on the host's
+         piano roll. Everyone else waits.</p>
+      <div class="empty-actions">
+        <button type="button" class="btn primary" id="emptyAddBtn">+ Add an entry</button>
+        <button type="button" class="btn" id="emptyImportBtn">Import CSV&hellip;</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="toolbar">
+    <div class="toolbar-left">
+      <button type="button" class="btn" id="importBtn" title="Import a CSV mapping file">Import&hellip;</button>
+      <button type="button" class="btn" id="exportBtn" title="Export the mapping as CSV">Export&hellip;</button>
+      <span class="entry-count" id="entryCount"></span>
+    </div>
+    <div class="toolbar-right">
+      <button type="button" class="btn danger-ghost" id="clearBtn" title="Remove all entries">Clear</button>
+      <button type="button" class="btn primary" id="addBtn">+ Add</button>
+    </div>
+  </footer>
+
+</div>
+
+<div id="toastHost" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

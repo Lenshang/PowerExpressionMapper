@@ -1,5 +1,4 @@
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
 
 ExpressionMapperAudioProcessor::ExpressionMapperAudioProcessor()
     : juce::AudioProcessor (BusesProperties())
@@ -258,12 +257,6 @@ void ExpressionMapperAudioProcessor::setStateInformation (const void* data, int 
             markStateChanged();
         }
     }
-}
-
-//==============================================================================
-juce::AudioProcessorEditor* ExpressionMapperAudioProcessor::createEditor()
-{
-    return new ExpressionMapperAudioProcessorEditor (*this);
 }
 
 //==============================================================================
